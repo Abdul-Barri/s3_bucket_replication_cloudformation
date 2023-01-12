@@ -1,12 +1,13 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
 Description: >
   Enabling Replication on two S3 buckets in the same AWS Account
 
 Resources:
-
   SourceBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "source-bucket-784253417097"
+      BucketName: "source-bucket-784253417097"
       VersioningConfiguration:
         Status: Enabled
       PublicAccessBlockConfiguration:
@@ -18,17 +19,16 @@ Resources:
         Role: !GetAtt "ReplicationRole.Arn"
         Rules:
           - Destination:
-              Bucket: 'arn:aws:s3:::destination-bucket-784253417097'
+              Bucket: "arn:aws:s3:::destination-bucket-784253417097"
               StorageClass: STANDARD
             Id: ReplicationConfig
-            Prefix: ''
+            Prefix: ""
             Status: Enabled
-    DependsOn: DestinationBucket
 
   DestinationBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "destination-bucket-784253417097"
+      BucketName: "destination-bucket-784253417097"
       VersioningConfiguration:
         Status: Enabled
       PublicAccessBlockConfiguration:
@@ -37,36 +37,36 @@ Resources:
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
 
-  SourceDestinationBucketPolicy:
-    Type: 'AWS::IAM::Policy'
+  ReplicationPolicy:
+    Type: "AWS::IAM::Policy"
     Properties:
       PolicyDocument:
         Statement:
           - Action:
-              - 's3:GetReplicationConfiguration'
-              - 's3:ListBucket'
+              - "s3:GetReplicationConfiguration"
+              - "s3:ListBucket"
             Effect: Allow
             Resource:
               - !Join
-                - ''
-                - - 'arn:aws:s3:::source-bucket-784253417097'
+                - ""
+                - - "arn:aws:s3:::source-bucket-784253417097"
           - Action:
-              - 's3:GetObjectVersion'
-              - 's3:GetObjectVersionAcl'
+              - "s3:GetObjectVersion"
+              - "s3:GetObjectVersionAcl"
             Effect: Allow
             Resource:
               - !Join
-                - ''
-                - - 'arn:aws:s3:::source-bucket-784253417097/*'
+                - ""
+                - - "arn:aws:s3:::source-bucket-784253417097/*"
           - Action:
-              - 's3:ReplicateObject'
-              - 's3:ReplicateDelete'
+              - "s3:ReplicateObject"
+              - "s3:ReplicateDelete"
             Effect: Allow
             Resource:
               - !Join
-                - ''
-                - - 'arn:aws:s3:::destination-bucket-784253417097/*'
-      PolicyName: SourceDestinationBucketPolicy
+                - ""
+                - - "arn:aws:s3:::destination-bucket-784253417097/*"
+      PolicyName: ReplicationPolicy
       Roles:
         - !Ref ReplicationRole
 
@@ -81,4 +81,3 @@ Resources:
             Principal:
               Service:
                 - s3.amazonaws.com
-
