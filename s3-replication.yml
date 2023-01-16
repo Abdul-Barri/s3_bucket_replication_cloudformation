@@ -2,12 +2,15 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >
   Enabling Replication on two S3 buckets in the same AWS Account
-
+Parameters:
+  ID:
+    Description: your unique ID or name
+    Type: String
 Resources:
   SourceBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: "source-bucket-784253417097"
+      BucketName: "source-bucket-${ID}"
       VersioningConfiguration:
         Status: Enabled
       PublicAccessBlockConfiguration:
@@ -19,7 +22,7 @@ Resources:
         Role: !GetAtt "ReplicationRole.Arn"
         Rules:
           - Destination:
-              Bucket: "arn:aws:s3:::destination-bucket-784253417097"
+              Bucket: "arn:aws:s3:::destination-bucket-${ID}"
               StorageClass: STANDARD
             Id: ReplicationConfig
             Prefix: ""
@@ -28,7 +31,7 @@ Resources:
   DestinationBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: "destination-bucket-784253417097"
+      BucketName: "destination-bucket-${ID}"
       VersioningConfiguration:
         Status: Enabled
       PublicAccessBlockConfiguration:
@@ -49,7 +52,7 @@ Resources:
             Resource:
               - !Join
                 - ""
-                - - "arn:aws:s3:::source-bucket-784253417097"
+                - - "arn:aws:s3:::source-bucket-${ID}"
           - Action:
               - "s3:GetObjectVersion"
               - "s3:GetObjectVersionAcl"
@@ -57,7 +60,7 @@ Resources:
             Resource:
               - !Join
                 - ""
-                - - "arn:aws:s3:::source-bucket-784253417097/*"
+                - - "arn:aws:s3:::source-bucket-${ID}/*"
           - Action:
               - "s3:ReplicateObject"
               - "s3:ReplicateDelete"
@@ -65,7 +68,7 @@ Resources:
             Resource:
               - !Join
                 - ""
-                - - "arn:aws:s3:::destination-bucket-784253417097/*"
+                - - "arn:aws:s3:::destination-bucket-${ID}/*"
       PolicyName: ReplicationPolicy
       Roles:
         - !Ref ReplicationRole
