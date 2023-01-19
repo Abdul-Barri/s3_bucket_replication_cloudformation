@@ -58,18 +58,7 @@ Here is a list of topics that will be covered in this lab on Amazon S3 Replicati
 
 - Step One - Create two buckets with policies that block all public access and versioning enabled. We will be using CloudFormation to this;
 
-1.  First, create a paramters file. You can name the file `paramaters.json` and include the following script in the paramters file;
-
-        [
-          {
-            "ParameterKey": "ID",
-            "ParameterValue": "<your_name>"
-          }
-        ]
-
-This creates a paramter called **ID** and assigns it the value **\<your_name>**. Kindly note that you need to replace **\<your_name>** with your actual name. This will be used in the creation of a unique S3 bucket name.
-
-2.  Create a cloudformation configuration file. Name the config file `main.yml` and include the following script in the config file;
+1.  Create a cloudformation configuration file. Name the config file `s3-replication.yml` and include the following script in the config file;
 
         ---
         AWSTemplateFormatVersion: "2010-09-09"
@@ -82,7 +71,7 @@ This creates a paramter called **ID** and assigns it the value **\<your_name>**.
 
 This simply defines the AWS template format version, the description of the cloudformation stack and the parameters which will be referenced in the creation of resources in the cloudformation stack.
 
-3.  Create a source bucket and enable versioning on it. The following code creates a source bucket named **source-bucket-${ID}**. Note that the **"\${ID}"** will be replaced by the name which you entered as the value of the **ID** parameter in your `parameter.json` file;
+2.  Create a source bucket and enable versioning on it. The following code creates a source bucket named **source-bucket-${ID}**. Note that the **"\${ID}"** will be replaced by the name which you entered as the value of the **ID** parameter in your `parameter.json` file;
 
         Resources:
           SourceBucket:
@@ -97,7 +86,7 @@ This simply defines the AWS template format version, the description of the clou
                 IgnorePublicAcls: true
                 RestrictPublicBuckets: true;
 
-This creates the source bucket with bucket versioning enabled and also blocks all public access to the bucket. Add the script to the `main.yml` file.
+This creates the source bucket with bucket versioning enabled and also blocks all public access to the bucket. Add the script to the `s3-replication.yml` file.
 
 3.  Create a destination bucket and enable versioning on it. The following code creates a destination bucket named **destination-bucket-${ID}**;
 
@@ -113,7 +102,27 @@ This creates the source bucket with bucket versioning enabled and also blocks al
               IgnorePublicAcls: true
               RestrictPublicBuckets: true
 
-This creates the destination bucket with bucket versioning enabled and also blocks all public access to the bucket. Add the script to the `main.yml` file.
+This creates the destination bucket with bucket versioning enabled and also blocks all public access to the bucket. Add the script to the `s3-replication.yml` file and save the file. You can also download the complete `s3-replication.yml` file [here](https://github.com/Abdul-Barri/s3_bucket_replication_cloudformation/blob/main/s3-replication.yml)
+
+4. We will be using the AWS cloudformation console to deploy the resources specified in the `s3-replication.yml` cloudformation file. Navigate to the cloudformation console and click **Create stack** and then click **With new resources (standard)**.
+
+![alt creating destination bucket](31.png)
+
+5. On the new page, select **Template is ready** as the **Prepare template** option. Then for **Template source**, select the **Upload a template file** option. Under **Upload a template file**, click **Choose file** and select the `s3-replication.yml` cloudformation file we prepared.
+
+![alt creating destination bucket](32.png)
+
+6. Leave all other options as default and click **Next**.
+
+![alt creating destination bucket](33.png)
+
+7. Check the **I acknowledge that AWS CloudFormation might create IAM resources** and click **Submit**.
+
+![alt creating destination bucket](34.png)
+
+![alt creating destination bucket](20.png)
+
+8. Head over to the AWS Management Console then navigate to the CloudFormation console and confirm that the script has been executed successfully. Click on **Resources**. This will display a list of the resources deployed based on what was declared in the Cloudformation script;
 
 ![alt creating destination bucket](8.png)
 
@@ -398,32 +407,92 @@ Note: Replace STACK_NAME with what you want to name the cloudformation stack, FI
 
 This lab will require permissions to create, update and delete CloudFormation stacks, create S3 buckets, list all S3 buckets, create and update roles in IAM and also grants permissions to replicate objects and delete replicated objects from the source bucket, put, get and delete objects from the destination bucket.This IAM policy grants the required permissions;
 
-    {
-      "Version": "2012-10-17",
-      "Statement": [
-        {
-          "Effect": "Allow",
-          "Action": [
-            "cloudformation:CreateStack",
-            "cloudformation:UpdateStack",
-            "cloudformation:DeleteStack",
-            "s3:CreateBucket",
-            "s3:ListAllMyBuckets"
-          ],
-          "Resource": "*"
-        },
-        {
-          "Effect": "Allow",
-          "Action": [
-              "iam:CreateRole",
-              "iam:PutRolePolicy",
-              "s3:ReplicateObject",
-              "s3:ReplicateDelete",
-              "s3:PutObject",
-              "s3:GetObject",
-              "s3:DeleteObject"
-          ],
-          "Resource": ["arn:aws:s3:::source-bucket/*", "arn:aws:s3:::destination-bucket/*"]
-        }
-      ]
-    }
+    ---
+    AWSTemplateFormatVersion: "2010-09-09"
+
+    Description: This template provisions a user with a timed and limited access policy
+
+    Parameters:
+      ID:
+        Description: unique ID or name
+        Type: String
+      IamUserName:
+        Type: String
+        Description: Username of Iam user
+      UserPassword:
+        Type: String
+        Description: Random Password of iam user.
+        Default: "c2O*6b@tHlt&c+i?aSpI"
+      StartTime:
+        Type: String
+        Description: Time to start lab in UTC e.g "2022-10-03T11:00:00Z"
+        Default: "2022-10-09T08:00:00Z"
+      EndTime:
+        Type: String
+        Description: Time to end lab in UTC e.g "2022-10-03T11:00:00Z"
+        Default: "2022-10-10T15:00:00Z"
+
+    Resources:
+      CloutraUser:
+        Type: AWS::IAM::User
+        Properties:
+          LoginProfile:
+            Password: !Ref UserPassword
+            PasswordResetRequired: False
+          Path: /
+          ManagedPolicyArns:
+            - !Ref PermissionPolicy
+          Tags:
+            - Key: lab
+              Value: !Ref IamUserName
+          UserName: !Ref IamUserName
+
+      PermissionPolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+          ManagedPolicyName: !Ref IamUserName # give a name to this policy
+          Description: Customer managed policy for only access required lab.
+          PolicyDocument: # (required) JSON policy document
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "cloudformation:CreateStack"
+                  - "cloudformation:UpdateStack"
+                  - "cloudformation:DeleteStack"
+                  - "cloudformation:DescribeStacks"
+                  - "cloudformation:GetTemplateSummary"
+                  - "cloudformation:ListStacks"
+                  - "s3:CreateBucket"
+                  - "s3:ListAllMyBuckets"
+                  - "s3:PutBucket"
+                  - "iam:PassRole"
+                Resource:
+                  - "arn:aws:cloudformation:*:${AWS::AccountId}:stack/${aws:username}-s3-replication-stack/*" # "${aws:username}-s3-replication-stack" is the <stack-name>
+                  - "arn:aws:s3:::source-bucket-${ID}"
+                  - "arn:aws:s3:::destination-bucket-${ID}"
+                  # - "*"
+                Condition:
+                  DateGreaterThan:
+                    aws:CurrentTime: !Ref StartTime
+                  DateLessThan:
+                    aws:CurrentTime: !Ref EndTime
+
+              - Effect: Allow
+                Action:
+                  - "iam:CreateRole"
+                  - "iam:PutRolePolicy"
+                  - "s3:ReplicateObject"
+                  - "s3:ReplicateDelete"
+                  - "s3:PutObject"
+                  - "s3:GetObject"
+                  - "s3:DeleteObject"
+                Resource:
+                  - "arn:aws:s3:::source-bucket-${ID}/*"
+                  - "arn:aws:s3:::destination-bucket-${ID}/*"
+                  - "arn:aws:iam:*:${AWS::AccountId}:role/${aws:username}-s3-replication-role/*"
+                Condition:
+                  DateGreaterThan:
+                    aws:CurrentTime: !Ref StartTime
+                  DateLessThan:
+                    aws:CurrentTime: !Ref EndTime
